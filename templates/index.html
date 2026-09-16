@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Live Stock Intelligence (Interactive ₹ Suite)</title>
+    <!-- Plotly.js for Interactive Candlestick and Line Charts -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background: #090d16;
+            background: radial-gradient(circle at 50% 0%, #172554 0%, #090d16 70%, #030712 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            padding: 25px 15px 60px 15px;
+        }
+        .container { width: 100%; max-width: 1140px; margin: 0 auto; text-align: center; }
+        h1 {
+            font-size: 34px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #38bdf8 0%, #4ade80 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+        .subtitle { color: #94a3b8; font-size: 15px; margin-bottom: 22px; }
+
+        /* Quick Pills */
+        .chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+        .chip {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 7px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chip:hover { background: #0284c7; color: white; transform: translateY(-2px); }
+
+        /* Search Form & Timeframes */
+        form { display: flex; justify-content: center; gap: 10px; max-width: 620px; margin: 0 auto 15px auto; }
+        input {
+            flex: 1;
+            padding: 14px 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+        }
+        input:focus { border-color: #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
+        button[type="submit"] {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #0284c7 0%, #10b981 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 15px;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        button[type="submit"]:hover { transform: scale(1.03); }
+
+        /* Timeframe Tabs */
+        .timeframe-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 25px; }
+        .tf-btn {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tf-btn.active, .tf-btn:hover { background: #0284c7; color: white; border-color: #38bdf8; }
+
+        /* Cards */
+        .card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: left;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+        }
+        .card-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .card h2 { color: #38bdf8; font-size: 20px; }
+
+        /* Live Header Banner */
+        .live-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 58, 138, 0.35) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 22px;
+            text-align: left;
+        }
+        .live-company { font-size: 25px; font-weight: 800; color: #fff; }
+        .live-tag { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .live-price-box { text-align: right; }
+        .live-price { font-size: 38px; font-weight: 800; color: #4ade80; }
+        .live-change { font-size: 16px; font-weight: 700; margin-top: 4px; }
+        .positive { color: #4ade80; }
+        .negative { color: #f87171; }
+        .currency-notice { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-label { color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: 600; }
+        .stat-val { font-size: 20px; font-weight: bold; color: #fff; margin: 6px 0; }
+        .stat-sub { color: #94a3b8; font-size: 12px; }
+
+        /* Risk Management Box */
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-top: 15px;
+        }
+        .risk-item {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        .risk-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
+        .risk-val { font-size: 22px; font-weight: 800; margin-top: 4px; }
+
+        /* Prediction Card */
+        .prediction-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(20, 83, 45, 0.3) 100%);
+            border: 1px solid rgba(74, 222, 128, 0.35);
+        }
+        .pred-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .pred-price { font-size: 36px; color: #4ade80; font-weight: 800; }
+        .sentiment-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .sentiment-badge.bullish { background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #4ade80; }
+        .sentiment-badge.bearish { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; }
+
+        /* Forecast Grid */
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .forecast-box {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .fc-day { font-size: 12px; color: #94a3b8; font-weight: 700; }
+        .fc-price { font-size: 16px; font-weight: bold; color: #fff; margin: 4px 0; }
+        .fc-change { font-size: 11px; font-weight: bold; }
+
+        /* Chart Controls */
+        .chart-toggle-bar { display: flex; gap: 8px; }
+        .chart-btn {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .chart-btn.active { background: #0284c7; color: white; }
+
+        /* Export Buttons */
+        .btn-export {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid #10b981;
+            color: #4ade80;
+            padding: 7px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn-export:hover { background: #10b981; color: black; }
+
+        /* Welcome Showcase */
+        .welcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 15px; }
+        .market-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: center;
+        }
+        .market-card:hover { border-color: #38bdf8; transform: translateY(-4px); background: rgba(30, 41, 59, 0.9); }
+        .market-card h3 { font-size: 20px; color: #fff; margin-bottom: 4px; }
+        .market-card p { color: #94a3b8; font-size: 13px; margin-bottom: 12px; }
+        .btn-launch { display: inline-block; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+        th { background: rgba(30, 41, 59, 0.8); color: #38bdf8; padding: 12px 14px; text-align: left; font-weight: 600; }
+        td { padding: 11px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: #cbd5e1; }
+        tr:hover td { background: rgba(255, 255, 255, 0.04); }
+
+        #loading { display: none; text-align: center; padding: 35px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(56, 189, 248, 0.2); border-top-color: #38bdf8; border-radius: 50%; margin: 0 auto 12px auto; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Print styles for PDF export */
+        @media print {
+            body { background: white !important; color: black !important; padding: 0; }
+            .chips, form, .timeframe-bar, .chart-toggle-bar, .btn-export, #loading { display: none !important; }
+            .card, .live-banner { background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; color: black !important; }
+            .live-company, .live-price, .pred-price, h1, h2 { color: black !important; }
+        }
+    </style>
+    <script>
+        function showLoading() {
+            document.getElementById("loading").style.display = "block";
+            const w = document.getElementById("welcome-box");
+            if (w) w.style.display = "none";
+        }
+        function quickSearch(name) {
+            document.getElementById("stock-input").value = name;
+            document.getElementById("search-form").submit();
+            showLoading();
+        }
+        function changePeriod(p) {
+            document.getElementById("period-input").value = p;
+            document.getElementById("search-form").submit();
+            showLoading();
+        }
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <h1>📊 AI Live Stock Intelligence Dashboard</h1>
+    <p class="subtitle">Interactive Real-Time Market Suite & 7-Day Neural Forecasting (Exclusively in ₹ Rupees)</p>
+
+    <!-- QUICK SEARCH PILLS -->
+    <div class="chips">
+        <button type="button" class="chip" onclick="quickSearch('Tata Motors')">🚗 Tata Motors</button>
+        <button type="button" class="chip" onclick="quickSearch('Reliance')">⛽ Reliance</button>
+        <button type="button" class="chip" onclick="quickSearch('State Bank of India')">🏦 SBI</button>
+        <button type="button" class="chip" onclick="quickSearch('Infosys')">💻 Infosys</button>
+        <button type="button" class="chip" onclick="quickSearch('Apple')">🍎 Apple</button>
+        <button type="button" class="chip" onclick="quickSearch('Tesla')">⚡ Tesla</button>
+    </div>
+
+    <!-- SEARCH FORM -->
+    <form id="search-form" method="POST" onsubmit="showLoading()">
+        <input type="hidden" id="period-input" name="period" value="{{ selected_period }}">
+        <input type="text"
+               id="stock-input"
+               name="stock"
+               placeholder="Search any company name (e.g. Tata Motors, Reliance, Apple, Tesla, SBI)..."
+               value="{{ summary.query if summary else '' }}"
+               required>
+        <button type="submit">Analyze Stock</button>
+    </form>
+
+    <!-- TIMEFRAME BUTTONS -->
+    <div class="timeframe-bar">
+        <button type="button" class="tf-btn {% if selected_period == '1mo' %}active{% endif %}" onclick="changePeriod('1mo')">1M</button>
+        <button type="button" class="tf-btn {% if selected_period == '6mo' %}active{% endif %}" onclick="changePeriod('6mo')">6M</button>
+        <button type="button" class="tf-btn {% if selected_period == '1y' %}active{% endif %}" onclick="changePeriod('1y')">1Y</button>
+        <button type="button" class="tf-btn {% if selected_period == '5y' %}active{% endif %}" onclick="changePeriod('5y')">5Y</button>
+    </div>
+
+    <!-- LOADING STATE -->
+    <div id="loading" class="card">
+        <div class="spinner"></div>
+        <h3 style="color:#38bdf8">⏳ Fetching Live Market Data & Running 7-Day Neural Forecast...</h3>
+        <p style="color:#94a3b8; font-size:14px; margin-top:4px;">Calculating live indicators in ₹ and projecting future trajectory...</p>
+    </div>
+
+    <!-- ERROR -->
+    {% if error %}
+    <div class="card" style="border: 1px solid #ef4444; text-align: center;">
+        <h3 style="color: #f87171;">⚠️ {{ error }}</h3>
+    </div>
+    {% endif %}
+
+    <!-- WELCOME SHOWCASE -->
+    {% if not summary and not error %}
+    <div id="welcome-box" class="card">
+        <h2>🔥 Popular Stocks (Click Any to Launch Analysis)</h2>
+        <div class="welcome-grid">
+            <div class="market-card" onclick="quickSearch('Tata Motors')">
+                <h3>Tata Motors</h3>
+                <p>NSE / Auto & EV</p>
+                <span class="btn-launch">⚡ Check Live ₹</span>
+            </div>
+            <div class="market-card" onclick="quickSearch('Reliance')">
+                <h3>Reliance Industries</h3>
+                <p>NSE / Conglomerate</p>
+                <span class="btn-launch">⛽ Check Live ₹</span>
+            </div>
+            <div class="market-card" onclick="quickSearch('Apple')">
+                <h3>Apple Inc.</h3>
+                <p>US Tech (Converted to ₹)</p>
+                <span class="btn-launch">🍎 Check Live ₹</span>
+            </div>
+            <div class="market-card" onclick="quickSearch('State Bank of India')">
+                <h3>State Bank of India</h3>
+                <p>NSE / Banking</p>
+                <span class="btn-launch">🏦 Check Live ₹</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- LIVE STOCK BANNER -->
+    {% if summary %}
+    <div class="live-banner">
+        <div>
+            <div class="live-company">{{ summary.company_name }}</div>
+            <div class="live-tag">
+                Exchange: <strong>{{ summary.exchange }}</strong> | Symbol: <strong>{{ summary.ticker }}</strong> | Timeframe: <strong>{{ selected_period.upper() }}</strong>
+            </div>
+        </div>
+        <div class="live-price-box">
+            <div class="live-price">₹{{ summary.current_price }}</div>
+            <div class="live-change {% if summary.price_change >= 0 %}positive{% else %}negative{% endif %}">
+                {{ '+' if summary.price_change >= 0 else '' }}₹{{ summary.price_change }} ({{ summary.price_change_pct }}%)
+            </div>
+            {% if summary.is_converted %}
+            <div class="currency-notice">Converted from {{ summary.original_curr }} to INR (₹)</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-label">Day Range</div>
+            <div class="stat-val">₹{{ summary.day_low }} - ₹{{ summary.day_high }}</div>
+            <div class="stat-sub">Today's Low & High</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">52-Week Range</div>
+            <div class="stat-val">₹{{ summary.low_52w }} - ₹{{ summary.high_52w }}</div>
+            <div class="stat-sub">Yearly Bounds (₹)</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Previous Close</div>
+            <div class="stat-val">₹{{ summary.prev_close }}</div>
+            <div class="stat-sub">Last Session Close</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Volume & RSI</div>
+            <div class="stat-val">{{ summary.volume }}</div>
+            <div class="stat-sub">RSI (14): {{ summary.rsi }}</div>
+        </div>
+    </div>
+
+    <!-- INTERACTIVE PLOTLY CHART -->
+    <div class="card">
+        <div class="card-header-flex">
+            <h2>📈 Interactive Market Chart (in ₹ Rupees)</h2>
+            <div class="chart-toggle-bar">
+                <button type="button" id="btn-line" class="chart-btn active" onclick="switchChartType('line')">Line View</button>
+                <button type="button" id="btn-candle" class="chart-btn" onclick="switchChartType('candlestick')">Candlesticks</button>
+            </div>
+        </div>
+        <!-- Plotly Chart Container -->
+        <div id="plotly-chart" style="width:100%; height:460px;"></div>
+    </div>
+
+    <!-- AI NEURAL PREDICTION & 7-DAY FORECAST -->
+    {% if prediction_info %}
+    <div class="card prediction-card">
+        <div class="pred-header-flex">
+            <div>
+                <h2>🤖 7-Day AI Neural Forecast (in ₹)</h2>
+                <div style="font-size:14px; color:#94a3b8; margin-top:2px;">
+                    Model Accuracy: <strong>{{ prediction_info.accuracy }}%</strong> | Horizon: <strong>Next 7 Trading Sessions</strong>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:13px; color:#94a3b8;">Next Day Target:</div>
+                <div class="pred-price">₹{{ prediction_info.next_day_price }}</div>
+                <div class="sentiment-badge {{ prediction_info.sentiment_class }}">
+                    Signal: {{ prediction_info.sentiment }} ({{ prediction_info.action }})
+                </div>
+            </div>
+        </div>
+
+        <!-- 7-Day Trajectory Grid -->
+        <div class="forecast-grid">
+            {% for item in prediction_info.forecast_items %}
+            <div class="forecast-box">
+                <div class="fc-day">{{ item.day }}</div>
+                <div style="font-size:11px; color:#64748b;">{{ item.date }}</div>
+                <div class="fc-price">{{ item.price_formatted }}</div>
+                <div class="fc-change {% if item.pct >= 0 %}positive{% else %}negative{% endif %}">
+                    {{ item.diff_formatted }} ({{ item.pct }}%)
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- RISK MANAGEMENT & TRADING ACTION PLAN -->
+    <div class="card">
+        <h2>🎯 Target & Stop-Loss Financial Action Plan</h2>
+        <p style="color:#94a3b8; font-size:14px; margin-top:4px;">{{ prediction_info.strategy }}</p>
+        <div class="risk-grid">
+            <div class="risk-item">
+                <div class="risk-label">Entry Price</div>
+                <div class="risk-val" style="color:#38bdf8;">₹{{ summary.current_price }}</div>
+            </div>
+            <div class="risk-item">
+                <div class="risk-label">Target Profit (₹)</div>
+                <div class="risk-val" style="color:#4ade80;">{{ prediction_info.target_price }}</div>
+            </div>
+            <div class="risk-item">
+                <div class="risk-label">Stop-Loss (₹)</div>
+                <div class="risk-val" style="color:#f87171;">{{ prediction_info.stop_loss }}</div>
+            </div>
+            <div class="risk-item">
+                <div class="risk-label">Risk : Reward</div>
+                <div class="risk-val" style="color:#fbbf24;">{{ prediction_info.rr_ratio }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- PREVIOUS STOCKS SESSIONS & EXPORT BUTTONS -->
+    {% if history_records %}
+    <div class="card">
+        <div class="card-header-flex">
+            <h2>📅 Previous Stock Sessions History (in ₹ Rupees)</h2>
+            <div style="display:flex; gap:10px;">
+                <a href="/download-csv/{{ summary.ticker }}" class="btn-export">📥 Download CSV</a>
+                <button type="button" class="btn-export" onclick="window.print()" style="background:rgba(56,189,248,0.2); border-color:#38bdf8; color:#38bdf8;">🖨️ Print / PDF</button>
+            </div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Open (₹)</th>
+                        <th>High (₹)</th>
+                        <th>Low (₹)</th>
+                        <th>Close (₹)</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in history_records %}
+                    <tr>
+                        <td><strong>{{ row.date }}</strong></td>
+                        <td>{{ row.open }}</td>
+                        <td>{{ row.high }}</td>
+                        <td>{{ row.low }}</td>
+                        <td style="color: #4ade80; font-weight: bold;">{{ row.close }}</td>
+                        <td>{{ row.volume }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+</div>
+
+<!-- INTERACTIVE PLOTLY CHART DATA & SCRIPT -->
+<script id="chart-data-payload" type="application/json">
+{{ chart_data_json | safe }}
+</script>
+<script id="forecast-data-payload" type="application/json">
+{{ forecast_chart_json | safe }}
+</script>
+<script>
+    const chartData = JSON.parse(document.getElementById('chart-data-payload').textContent || '{}');
+    const forecastData = JSON.parse(document.getElementById('forecast-data-payload').textContent || '{}');
+    let currentChartType = 'line';
+
+    function renderPlotlyChart() {
+        if (!chartData || !chartData.dates || chartData.dates.length === 0) return;
+
+        const traces = [];
+
+        if (currentChartType === 'candlestick') {
+            traces.push({
+                x: chartData.dates,
+                open: chartData.open,
+                high: chartData.high,
+                low: chartData.low,
+                close: chartData.close,
+                type: 'candlestick',
+                name: 'Price (₹)',
+                increasing: { line: { color: '#4ade80' } },
+                decreasing: { line: { color: '#f87171' } }
+            });
+        } else {
+            traces.push({
+                x: chartData.dates,
+                y: chartData.close,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Historical Price (₹)',
+                line: { color: '#00d4ff', width: 2.2 }
+            });
+        }
+
+        // 20-Day SMA Trace
+        if (chartData.sma20) {
+            traces.push({
+                x: chartData.dates,
+                y: chartData.sma20,
+                type: 'scatter',
+                mode: 'lines',
+                name: '20-Day SMA (₹)',
+                line: { color: '#ffaa00', width: 1.5, dash: 'dot' }
+            });
+        }
+
+        // 7-Day Dotted Forecast Trace
+        if (forecastData && forecastData.dates && forecastData.dates.length > 0) {
+            traces.push({
+                x: forecastData.dates,
+                y: forecastData.prices,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: '🔮 7-Day AI Forecast (₹)',
+                line: { color: '#4ade80', width: 2.8, dash: 'dash' },
+                marker: { size: 6, color: '#4ade80' }
+            });
+        }
+
+        const layout = {
+            plot_bgcolor: '#0f172a',
+            paper_bgcolor: '#0f172a',
+            margin: { t: 30, r: 25, l: 60, b: 40 },
+            font: { color: '#94a3b8' },
+            xaxis: {
+                gridcolor: '#1e293b',
+                linecolor: '#334155',
+                rangeslider: { visible: false }
+            },
+            yaxis: {
+                gridcolor: '#1e293b',
+                linecolor: '#334155',
+                title: 'Price in Indian Rupees (₹)'
+            },
+            legend: {
+                orientation: 'h',
+                x: 0,
+                y: 1.12,
+                font: { color: '#ffffff' }
+            }
+        };
+
+        Plotly.newPlot('plotly-chart', traces, layout, { responsive: true, displayModeBar: true });
+    }
+
+    function switchChartType(type) {
+        currentChartType = type;
+        document.getElementById('btn-line').classList.toggle('active', type === 'line');
+        document.getElementById('btn-candle').classList.toggle('active', type === 'candlestick');
+        renderPlotlyChart();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderPlotlyChart();
+    });
+</script>
+
+</body>
+</html>
